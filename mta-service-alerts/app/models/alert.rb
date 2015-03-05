@@ -8,12 +8,16 @@ class Alert < ActiveRecord::Base
 
     puts "get data now"
 
+    # TODO: Add error handling in instances of failure to fetch.
+    # TODO: Save page (without nokogiri) to (non-relational?) db.
     page = self.download_page
     lines = self.find_lines page
 
     lines.each do |line|
       line_data = self.line_data line
+      # TODO: line_data can include multiple alerts. We need to split them.
 
+      # Good service is the the lack of an alert.
       if self.alert_exists? line_data
         puts line_data
         current_time = self.convert_time(page.css('timestamp').inner_text)
@@ -31,9 +35,11 @@ class Alert < ActiveRecord::Base
     def self.download_page
       # For testing purposes, we get a saved serviceData file.
       # return Nokogiri::HTML(open("../research/2015-02-22-08-42-01.xml"))
+
       url = "http://web.mta.info/status/serviceStatus.txt"
       begin
         page = Nokogiri::HTML(open(url))
+        # TODO: Handle instances where the page has not been updated.
       rescue
         puts "Exception #{e}"
         puts "Unable to fetch #{url}"
@@ -41,6 +47,7 @@ class Alert < ActiveRecord::Base
     end
 
     def self.find_lines page
+      # Bus info is currently filtered out for simplicity.
       train_names = ["123", "456", "7", "ACE", "BDFM", "G", "JZ", "L", "NQR", "S", "SIR"]
       all_lines = page.css('line')
       all_lines.select do |line|
@@ -78,8 +85,8 @@ class Alert < ActiveRecord::Base
       if line_active_alert
 
         if self.same_alert line_active_alert, data
-          self.update_end_time line_active_alert, current_time
           # Update the active_until time to current time
+          self.update_end_time line_active_alert, current_time
         else
           self.set_alert_inactive line_active_alert
           self.create_data data
@@ -93,7 +100,6 @@ class Alert < ActiveRecord::Base
     end
 
     def self.same_alert line_active_alert, data
-      # binding.pry
         line_active_alert[:status] == data[:status] &&
         line_active_alert[:text] == data[:text]
     end
@@ -104,7 +110,6 @@ class Alert < ActiveRecord::Base
     end
 
     def self.create_data data
-      # binding.pry
       alert = Alert.new
       alert[:name] = data[:name]
       alert[:status] = data[:status]
