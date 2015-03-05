@@ -11,7 +11,8 @@ class Alert < ActiveRecord::Base
     # TODO: Add error handling in instances of failure to fetch.
     # TODO: Save page (without nokogiri) to (non-relational?) db.
     page = self.download_page
-    lines = self.find_lines page
+    doc = Nokogiri::XML page
+    lines = self.find_lines doc
 
     lines.each do |line|
       line_data = self.line_data line
@@ -20,8 +21,8 @@ class Alert < ActiveRecord::Base
       # Good service is the the lack of an alert.
       if self.alert_exists? line_data
         puts line_data
-        current_time = self.convert_time(page.css('timestamp').inner_text)
-        self.update_database line_data, current_time
+        current_time = self.convert_time(doc.css('timestamp').inner_text)
+        # self.update_database line_data, current_time
       end
     end
   end
@@ -33,23 +34,17 @@ class Alert < ActiveRecord::Base
     end
 
     def self.download_page
-      # For testing purposes, we get a saved serviceData file.
-      # return Nokogiri::HTML(open("../research/2015-02-22-08-42-01.xml"))
+      # For testing purposes, we use a saved serviceData file.
+      # return open("../research/2015-02-22-08-42-01.xml")
 
       url = "http://web.mta.info/status/serviceStatus.txt"
-      begin
-        page = Nokogiri::HTML(open(url))
-        # TODO: Handle instances where the page has not been updated.
-      rescue
-        puts "Exception #{e}"
-        puts "Unable to fetch #{url}"
-      end
+      open url
     end
 
-    def self.find_lines page
+    def self.find_lines doc
       # Bus info is currently filtered out for simplicity.
       train_names = ["123", "456", "7", "ACE", "BDFM", "G", "JZ", "L", "NQR", "S", "SIR"]
-      all_lines = page.css('line')
+      all_lines = doc.css('line')
       all_lines.select do |line|
         train_names.include? line.css('name').inner_text
       end
@@ -63,7 +58,7 @@ class Alert < ActiveRecord::Base
         name: line.css('name').inner_text,
         status: line.css('status').inner_text,
         start_time: "#{date} #{time}",
-        text: self.clean_html_page(line)
+        text: self.clean_html(line)
       }
 
       unless result[:start_time].blank?
@@ -73,7 +68,7 @@ class Alert < ActiveRecord::Base
       return result
     end
 
-    def self.clean_html_page line
+    def self.clean_html line
       regex = /<\/*br\/*>|<\/*b>|<\/*i>|<\/*strong>|<\/*font.*?>|<\/*u>/
       line.css('text').inner_text.gsub(regex, '').gsub('&nbsp;', '')
           .gsub('Posted: ', '').gsub(/\s{2,}/, ' ')
