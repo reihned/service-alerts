@@ -4,10 +4,6 @@ require 'pry'
 
 class Alert < ActiveRecord::Base
 
-  def self.alert_exists? data
-    data[:status] != "GOOD SERVICE"
-  end
-
   def self.split_alerts alerts
 
   end
@@ -44,23 +40,6 @@ class Alert < ActiveRecord::Base
   end
 
   private
-
-    def self.download_page
-      # For testing purposes, we use a saved serviceData file.
-      # return open("../research/2015-02-22-08-42-01.xml")
-
-      url = "http://web.mta.info/status/serviceStatus.txt"
-      open url
-    end
-
-    def self.find_lines doc
-      # Bus info is currently filtered out for simplicity.
-      train_names = ["123", "456", "7", "ACE", "BDFM", "G", "JZ", "L", "NQR", "S", "SIR"]
-      all_lines = doc.css('line')
-      all_lines.select do |line|
-        train_names.include? line.css('name').inner_text
-      end
-    end
  
     def self.line_data line
       date = line.css('date').inner_text
