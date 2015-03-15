@@ -5,8 +5,49 @@ require 'pry'
 class Alert < ActiveRecord::Base
 
   def self.split_alerts alerts
+    alerts = Nokogiri::HTML(
+      '<span class="TitleDelay">Delays</span><P>Foo</P>
+       <span class="TitleDelay">Delays</span><P>Bar</P>
+       <span class="TitleDelay">Delays</span><P>Bax</P>
+       <span class="TitlePlannedWork">Planned Work</span><P>Baz</P>')
+
+    delimiters_class = ["TitlePlannedWork", "TitleDelay", "TitleServiceChange"]
+
+    alerts_count = self.alert_count alerts, delimiters_class
+
+    alerts_count.times do |idx|
+      alert_xpath = self.construct_xpath alerts, delimiters_class, idx, alerts_count
+      puts "#{alert_xpath}:\n\t#{alerts.xpath(alert_xpath)}\n"
+    end
+
 
   end
+
+  def self.alert_count alerts, delimiters_class
+    delimiter_xpath = delimiters_class.map do |delimiter|
+      "//span[@class='#{delimiter}']"
+    end.join('|')
+    alerts.xpath(delimiter_xpath).count
+  end
+
+  def self.construct_xpath alerts, delimiters_class, idx, alerts_count
+    delimiters = delimiters_class.map do |delimiter|
+      "@class='#{delimiter}'"
+    end.join(' or ')
+
+    xpath = "//*[preceding-sibling::span[#{delimiters}][#{idx + 1}]]"
+
+    # If this isn't the last alert, bound with the next alert.
+    if idx + 1 != alerts_count
+      # The way that `following-siblings` counts *down* from alerts_count seems
+      # to run counter to the xpath description from w3 schools, but works.
+      xpath += "[following-sibling::span[#{delimiters}][#{alerts_count - idx - 1}]]"
+    end
+    xpath
+  end
+
+
+
 
   def initialize
 
