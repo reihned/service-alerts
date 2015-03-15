@@ -4,6 +4,22 @@ require 'pry'
 
 class Alert < ActiveRecord::Base
 
+  def self.alert_exists? data
+    data[:status] != "GOOD SERVICE"
+  end
+
+  def self.split_alerts alerts
+
+  end
+
+  def initialize
+
+  end
+
+
+
+  # To be deprecated
+
   def self.get_data
 
     puts "get data now"
@@ -28,10 +44,6 @@ class Alert < ActiveRecord::Base
   end
 
   private
-
-    def self.alert_exists? data
-      data[:status] != "GOOD SERVICE"
-    end
 
     def self.download_page
       # For testing purposes, we use a saved serviceData file.
