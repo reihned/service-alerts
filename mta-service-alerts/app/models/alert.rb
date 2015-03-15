@@ -4,49 +4,42 @@ require 'pry'
 
 class Alert < ActiveRecord::Base
 
+  def self.split_alerts alerts
+
+  end
+
+  def initialize
+
+  end
+
+
+
+  # To be deprecated
+
   def self.get_data
 
     puts "get data now"
 
+    # TODO: Add error handling in instances of failure to fetch.
+    # TODO: Save page (without nokogiri) to (non-relational?) db.
     page = self.download_page
-    lines = self.find_lines page
+    doc = Nokogiri::XML page
+    lines = self.find_lines doc
 
     lines.each do |line|
       line_data = self.line_data line
+      # TODO: line_data can include multiple alerts. We need to split them.
 
+      # Good service is the the lack of an alert.
       if self.alert_exists? line_data
         puts line_data
-        current_time = self.convert_time(page.css('timestamp').inner_text)
-        self.update_database line_data, current_time
+        current_time = self.convert_time(doc.css('timestamp').inner_text)
+        # self.update_database line_data, current_time
       end
     end
   end
 
   private
-
-    def self.alert_exists? data
-      data[:status] != "GOOD SERVICE"
-    end
-
-    def self.download_page
-      # For testing purposes, we get a saved serviceData file.
-      # return Nokogiri::HTML(open("../research/2015-02-22-08-42-01.xml"))
-      url = "http://web.mta.info/status/serviceStatus.txt"
-      begin
-        page = Nokogiri::HTML(open(url))
-      rescue
-        puts "Exception #{e}"
-        puts "Unable to fetch #{url}"
-      end
-    end
-
-    def self.find_lines page
-      train_names = ["123", "456", "7", "ACE", "BDFM", "G", "JZ", "L", "NQR", "S", "SIR"]
-      all_lines = page.css('line')
-      all_lines.select do |line|
-        train_names.include? line.css('name').inner_text
-      end
-    end
  
     def self.line_data line
       date = line.css('date').inner_text
@@ -56,7 +49,7 @@ class Alert < ActiveRecord::Base
         name: line.css('name').inner_text,
         status: line.css('status').inner_text,
         start_time: "#{date} #{time}",
-        text: self.clean_html_page(line)
+        text: self.clean_html(line)
       }
 
       unless result[:start_time].blank?
@@ -66,20 +59,14 @@ class Alert < ActiveRecord::Base
       return result
     end
 
-    def self.clean_html_page line
-      regex = /<\/*br\/*>|<\/*b>|<\/*i>|<\/*strong>|<\/*font.*?>|<\/*u>/
-      line.css('text').inner_text.gsub(regex, '').gsub('&nbsp;', '')
-          .gsub('Posted: ', '').gsub(/\s{2,}/, ' ')
-    end
-
     def self.update_database data, current_time
       line_active_alert = Alert.find_by active: true, name: data[:name]
 
       if line_active_alert
 
         if self.same_alert line_active_alert, data
-          self.update_end_time line_active_alert, current_time
           # Update the active_until time to current time
+          self.update_end_time line_active_alert, current_time
         else
           self.set_alert_inactive line_active_alert
           self.create_data data
@@ -93,7 +80,6 @@ class Alert < ActiveRecord::Base
     end
 
     def self.same_alert line_active_alert, data
-      # binding.pry
         line_active_alert[:status] == data[:status] &&
         line_active_alert[:text] == data[:text]
     end
@@ -104,7 +90,6 @@ class Alert < ActiveRecord::Base
     end
 
     def self.create_data data
-      # binding.pry
       alert = Alert.new
       alert[:name] = data[:name]
       alert[:status] = data[:status]
