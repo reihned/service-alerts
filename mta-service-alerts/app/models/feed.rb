@@ -1,4 +1,5 @@
 require 'open-uri'
+require 'pry'
 
 class Feed
 
@@ -17,6 +18,7 @@ class Feed
       status = line.css('status').inner_text
 
       puts "#{name}: #{status}"
+      fix_html line
     end
   end
 
@@ -48,6 +50,16 @@ class Feed
   def has_alert? line
     status = line.css('status').inner_text.strip
     status != "GOOD SERVICE"
+  end
+
+  # The HTML in the `text` field of the XML is horrifically invalid, this helps.
+  def fix_html line
+    # Escaped characters (&gt; etc.) are automatically unescaped by Nokogiri.
+    raw_text = line.css('text').inner_text
+    regex = /<\/*br\/*>|<\/*b>|<\/*i>|<\/*u>|<\/*strong>|<\/*font.*?>/
+    formatted_text = raw_text.gsub(regex, '').gsub('&nbsp;', ' ')
+                              .gsub('Posted: ', '').gsub(/\s{2,}/, ' ')
+    Nokogiri::HTML formatted_text
   end
 
 

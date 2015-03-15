@@ -59,12 +59,6 @@ class Alert < ActiveRecord::Base
       return result
     end
 
-    def self.clean_html line
-      regex = /<\/*br\/*>|<\/*b>|<\/*i>|<\/*strong>|<\/*font.*?>|<\/*u>/
-      line.css('text').inner_text.gsub(regex, '').gsub('&nbsp;', '')
-          .gsub('Posted: ', '').gsub(/\s{2,}/, ' ')
-    end
-
     def self.update_database data, current_time
       line_active_alert = Alert.find_by active: true, name: data[:name]
 
