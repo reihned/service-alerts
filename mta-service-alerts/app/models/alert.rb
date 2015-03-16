@@ -4,30 +4,26 @@ require 'pry'
 
 class Alert < ActiveRecord::Base
 
-  def self.split_alerts alerts
-    alerts = Nokogiri::HTML(
-      '<span class="TitleDelay">Delays</span><P>Foo</P>
-       <span class="TitleDelay">Delays</span><P>Bar</P>
-       <span class="TitleDelay">Delays</span><P>Bax</P>
-       <span class="TitlePlannedWork">Planned Work</span><P>Baz</P>')
-
+  def self.split_alerts line_name, alerts, mta_current_time
     delimiters_class = ["TitlePlannedWork", "TitleDelay", "TitleServiceChange"]
-
-    alerts_count = self.alert_count alerts, delimiters_class
+    alerts_type = self.alerts_type alerts, delimiters_class
+    alerts_count = alerts_type.count
 
     alerts_count.times do |idx|
       alert_xpath = self.construct_xpath alerts, delimiters_class, idx, alerts_count
-      puts "#{alert_xpath}:\n\t#{alerts.xpath(alert_xpath)}\n"
+      alert = alerts.xpath(alert_xpath)
+
+      puts "\n#{alert_xpath}:
+            \t#{alerts_type[idx]}
+            \t#{alerts.xpath(alert_xpath)}"
     end
-
-
   end
 
-  def self.alert_count alerts, delimiters_class
+  def self.alerts_type alerts, delimiters_class
     delimiter_xpath = delimiters_class.map do |delimiter|
       "//span[@class='#{delimiter}']"
     end.join('|')
-    alerts.xpath(delimiter_xpath).count
+    alerts.xpath(delimiter_xpath)
   end
 
   def self.construct_xpath alerts, delimiters_class, idx, alerts_count
@@ -46,7 +42,9 @@ class Alert < ActiveRecord::Base
     xpath
   end
 
-
+  def self.process_time time_str
+    DateTime.strptime time_str, "%m/%d/%Y %l:%M:%S %p"
+  end
 
 
   def initialize
@@ -55,30 +53,6 @@ class Alert < ActiveRecord::Base
 
 
 
-  # To be deprecated
-
-  def self.get_data
-
-    puts "get data now"
-
-    # TODO: Add error handling in instances of failure to fetch.
-    # TODO: Save page (without nokogiri) to (non-relational?) db.
-    page = self.download_page
-    doc = Nokogiri::XML page
-    lines = self.find_lines doc
-
-    lines.each do |line|
-      line_data = self.line_data line
-      # TODO: line_data can include multiple alerts. We need to split them.
-
-      # Good service is the the lack of an alert.
-      if self.alert_exists? line_data
-        puts line_data
-        current_time = self.convert_time(doc.css('timestamp').inner_text)
-        # self.update_database line_data, current_time
-      end
-    end
-  end
 
   private
  
@@ -140,20 +114,6 @@ class Alert < ActiveRecord::Base
       alert[:active] = true
 
       alert.save
-    end
-
-    def self.convert_time time_string
-      time_string = time_string.gsub(/\s{2,}/, ' ')
-                               .gsub(/0(\d\/)/, '\1')
-                               .gsub(/\s+(\d:)/, ' 0\1')
-
-      # AM/PM seems to be broken for strptime
-      # This is a hack around that
-      if time_string.match('AM')
-        DateTime.strptime(time_string, "%m/%d/%Y %l:%M")
-      elsif time_string.match('PM')
-        DateTime.strptime(time_string, "%m/%d/%Y %l:%M") + 12.hours
-      end
     end
 
     def self.update_end_time record, current_time
