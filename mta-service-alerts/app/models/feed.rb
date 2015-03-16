@@ -6,9 +6,10 @@ class Feed
   def initialize
     page = get_page
     doc = parse_page page
+    mta_current_time = doc.css('timestamp').inner_text
     lines = select_lines doc
 
-    puts_lines lines
+    create_alerts_for_lines lines, mta_current_time
   end
 
   # For debugging purposes
@@ -25,6 +26,9 @@ class Feed
   def get_page
     url = "http://web.mta.info/status/serviceStatus.txt"
     open url
+
+    # # for testing
+    # open("../research/2015-02-22-08-42-01.xml")
   end
 
   def parse_page page
@@ -60,6 +64,16 @@ class Feed
     formatted_text = raw_text.gsub(regex, '').gsub('&nbsp;', ' ')
                               .gsub('Posted: ', '').gsub(/\s{2,}/, ' ')
     Nokogiri::HTML formatted_text
+  end
+
+  def create_alerts_for_lines lines, mta_current_time
+    lines.each do |line|
+      Alert.split_alerts(
+        line.css('name').inner_text,
+        fix_html(line),
+        mta_current_time
+      )
+    end
   end
 
 
