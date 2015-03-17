@@ -4,40 +4,51 @@ require 'pry'
 
 class Alert < ActiveRecord::Base
 
-  def self.split_alerts alerts
+  def self.split_alerts line_name, alerts, mta_current_time
+    delimiters_class = ["TitlePlannedWork", "TitleDelay", "TitleServiceChange"]
+    alerts_type = self.alerts_type alerts, delimiters_class
+    alerts_count = alerts_type.count
 
-  end
+    alerts_count.times do |idx|
+      alert_xpath = self.construct_xpath alerts, delimiters_class, idx, alerts_count
+      alert = alerts.xpath(alert_xpath)
 
-  def initialize
-
-  end
-
-
-
-  # To be deprecated
-
-  def self.get_data
-
-    puts "get data now"
-
-    # TODO: Add error handling in instances of failure to fetch.
-    # TODO: Save page (without nokogiri) to (non-relational?) db.
-    page = self.download_page
-    doc = Nokogiri::XML page
-    lines = self.find_lines doc
-
-    lines.each do |line|
-      line_data = self.line_data line
-      # TODO: line_data can include multiple alerts. We need to split them.
-
-      # Good service is the the lack of an alert.
-      if self.alert_exists? line_data
-        puts line_data
-        current_time = self.convert_time(doc.css('timestamp').inner_text)
-        # self.update_database line_data, current_time
-      end
+      puts "\n#{alert_xpath}:
+            \t#{alerts_type[idx]}
+            \t#{alerts.xpath(alert_xpath)}"
     end
   end
+
+  def self.alerts_type alerts, delimiters_class
+    delimiter_xpath = delimiters_class.map do |delimiter|
+      "//span[@class='#{delimiter}']"
+    end.join('|')
+    alerts.xpath(delimiter_xpath)
+  end
+
+  def self.construct_xpath alerts, delimiters_class, idx, alerts_count
+    delimiters = delimiters_class.map do |delimiter|
+      "@class='#{delimiter}'"
+    end.join(' or ')
+
+    xpath = "//*[preceding-sibling::span[#{delimiters}][#{idx + 1}]]"
+
+    # If this isn't the last alert, bound with the next alert.
+    if idx + 1 != alerts_count
+      # The way that `following-siblings` counts *down* from alerts_count seems
+      # to run counter to the xpath description from w3 schools, but works.
+      xpath += "[following-sibling::span[#{delimiters}][#{alerts_count - idx - 1}]]"
+    end
+    xpath
+  end
+
+  def self.process_time time_str
+    DateTime.strptime time_str, "%m/%d/%Y %l:%M:%S %p"
+  end
+
+
+
+
 
   private
  
@@ -99,20 +110,6 @@ class Alert < ActiveRecord::Base
       alert[:active] = true
 
       alert.save
-    end
-
-    def self.convert_time time_string
-      time_string = time_string.gsub(/\s{2,}/, ' ')
-                               .gsub(/0(\d\/)/, '\1')
-                               .gsub(/\s+(\d:)/, ' 0\1')
-
-      # AM/PM seems to be broken for strptime
-      # This is a hack around that
-      if time_string.match('AM')
-        DateTime.strptime(time_string, "%m/%d/%Y %l:%M")
-      elsif time_string.match('PM')
-        DateTime.strptime(time_string, "%m/%d/%Y %l:%M") + 12.hours
-      end
     end
 
     def self.update_end_time record, current_time
