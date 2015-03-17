@@ -25,10 +25,10 @@ class Feed
 
   def get_page
     url = "http://web.mta.info/status/serviceStatus.txt"
-    open url
+    # open url
 
     # # for testing
-    # open("../research/2015-02-22-08-42-01.xml")
+    open("../research/2015-02-22-08-42-01.xml")
   end
 
   def parse_page page
