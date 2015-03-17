@@ -47,10 +47,6 @@ class Alert < ActiveRecord::Base
   end
 
 
-  def initialize
-
-  end
-
 
 
 
