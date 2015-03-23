@@ -6,7 +6,7 @@ class Alert
   @@delimiters_class = ["TitlePlannedWork", "TitleDelay", "TitleServiceChange"]
 
   def self.split_alerts line_name, alerts, mta_current_time
-    @@mta_current_time = mta_current_time
+    @@mta_current_time = self.process_mta_current_time mta_current_time
 
     alerts_type = self.alerts_type alerts
     alerts_count = alerts_type.count
@@ -47,8 +47,12 @@ class Alert
     alerts.xpath alert_xpath
   end
 
-  def self.process_time time_str
+  def self.process_mta_current_time time_str
     DateTime.strptime time_str, "%m/%d/%Y %l:%M:%S %p"
+  end
+
+  def self.process_start_time time_str
+    DateTime.strptime time_str, "%m/%d/%Y %l:%M%p"
   end
 
 
@@ -56,35 +60,43 @@ class Alert
   attr_accessor :alert_type, :alert_html
 
   def initialize alert_type, alert_html
-    @alert_type = alert_type
+    alert_type = alert_type
     @alert_html = alert_html
 
-    if @alert_type.inner_text == "Delays"
-      delay_data = extract_delay_data
-      delay_data[:original_html] = @alert_type.to_s + @alert_html.to_s
-
-      ap delay_data
+    if alert_type.inner_text == "Delays"
+      data = extract_delay_data
+      data[:original_html] = alert_type.to_s + @alert_html.to_s
+      data[:active] = true
+      
+      create_or_update_delay data
     end
+  end
+
+  def create_or_update_delay data
+    alert = Delay.find_by(active: true, original_html: data[:original_html]) ||
+            Delay.create(data)
+
+    alert.update end_time: @@mta_current_time
   end
 
   def extract_delay_data
     alert_text = @alert_html.inner_text.sub("Allow additional travel time.", '')
 
-    standard_delay = /(.+) Due to (.+) at (.+), (.+) trains are running with delays(.*)\./
-    residual_delay = /(.+) Following an earlier incident at (.+), (.+) trains service has resumed with residual delays(.*)\./
+    standard_delay = /Posted: (.+) Due to (.+) at (.+), (.+) trains are running with delays(.*)\./
+    residual_delay = /Posted: (.+) Following an earlier incident at (.+), (.+) trains service has resumed with residual delays(.*)\./
 
     case alert_text
     when standard_delay
       {
-        alert_timestamp: "#$1",
+        start_time: Alert.process_start_time("#$1"),
         incident_type: "#$2",
         incident_location: "#$3",
         affected_lines: "#$4#$5"
       }
     when residual_delay
       {
-        alert_timestamp: "#$1",
-        incident_type: nil,
+        start_time: Alert.process_start_time("#$1"),
+        incident_type: "residual delay",
         incident_location: "#$2",
         affected_lines: "#$3#$4"
       }

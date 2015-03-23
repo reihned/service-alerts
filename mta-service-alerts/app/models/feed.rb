@@ -10,6 +10,8 @@ class Feed
     lines = select_lines doc
 
     create_alerts_for_lines lines, mta_current_time
+
+    # Delay.toggle_active_for_previously_active
   end
 
   # For debugging purposes
@@ -62,7 +64,8 @@ class Feed
     raw_text = line.css('text').inner_text
     regex = /<\/*br\/*>|<\/*b>|<\/*i>|<\/*u>|<\/*strong>|<\/*font.*?>/
     formatted_text = raw_text.gsub(regex, '').gsub('&nbsp;', ' ')
-                              .gsub('Posted: ', '').gsub(/\s{2,}/, ' ')
+                              .gsub(/\s{2,}/, ' ')
+                              # .gsub('Posted: ', '')
     Nokogiri::HTML formatted_text
   end
 

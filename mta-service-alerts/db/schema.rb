@@ -11,20 +11,19 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20150222182257) do
+ActiveRecord::Schema.define(version: 20150318134705) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
-  create_table "alerts", force: :cascade do |t|
-    t.string   "name"
-    t.string   "status"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
+  create_table "delays", force: :cascade do |t|
+    t.text     "original_html"
+    t.string   "incident_type"
+    t.string   "incident_location"
+    t.string   "affected_lines"
+    t.boolean  "active"
     t.datetime "start_time"
     t.datetime "end_time"
-    t.boolean  "active"
-    t.text     "text"
   end
 
 end
