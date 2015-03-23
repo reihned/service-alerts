@@ -60,15 +60,18 @@ class Alert
     @alert_html = alert_html
 
     if @alert_type.inner_text == "Delays"
-      puts delay_data
+      delay_data = extract_delay_data
+      delay_data[:original_html] = @alert_type.to_s + @alert_html.to_s
+
+      ap delay_data
     end
   end
 
-  def delay_data
+  def extract_delay_data
     alert_text = @alert_html.inner_text.sub("Allow additional travel time.", '')
 
     standard_delay = /(.+) Due to (.+) at (.+), (.+) trains are running with delays(.*)\./
-    residual_delay = /(.+) Following an earlier incident at (.+), (.+) trains service has resumed with residual delays/
+    residual_delay = /(.+) Following an earlier incident at (.+), (.+) trains service has resumed with residual delays(.*)\./
 
     case alert_text
     when standard_delay
@@ -76,13 +79,17 @@ class Alert
         alert_timestamp: "#$1",
         incident_type: "#$2",
         incident_location: "#$3",
-        affected_lines: "#$4#$5",
-        original_html: @alert_type.to_s + @alert_html.to_s
+        affected_lines: "#$4#$5"
       }
     when residual_delay
-      puts "Redidual delays"
+      {
+        alert_timestamp: "#$1",
+        incident_type: nil,
+        incident_location: "#$2",
+        affected_lines: "#$3#$4"
+      }
     else
-      puts "Non-standard delay"
+      {}
     end
   end
 
