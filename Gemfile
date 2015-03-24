@@ -51,4 +51,3 @@ group :development, :test do
   gem 'awesome_print'
 end
 
-gem 'whenever', :require => false
