@@ -5,9 +5,7 @@ require 'pry'
 class Alert
   @@delimiters_class = ["TitlePlannedWork", "TitleDelay", "TitleServiceChange"]
 
-  def self.split_alerts line_name, alerts, mta_current_time
-    $mta_current_time = self.process_mta_current_time mta_current_time
-
+  def self.split_alerts line_name, alerts
     alerts_type = self.alerts_type alerts
     alerts_count = alerts_type.count
 
@@ -45,10 +43,6 @@ class Alert
 
   def self.get_alert alerts, alert_xpath
     alerts.xpath alert_xpath
-  end
-
-  def self.process_mta_current_time time_str
-    DateTime.strptime time_str, "%m/%d/%Y %l:%M:%S %p"
   end
 
   def self.process_start_time time_str
