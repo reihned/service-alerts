@@ -1,5 +1,4 @@
 require 'open-uri'
-require 'pry'
 
 class Feed
 
@@ -7,8 +6,6 @@ class Feed
     page = get_page
     @doc = parse_page page
     $mta_current_time = mta_current_time
-
-    # binding.pry
 
     # If the feed's timestamp is equal to end_time of the existing active delays
     # then the feed hasn't been updated since we last checked it.
