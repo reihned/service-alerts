@@ -10,17 +10,10 @@ class Feed
     lines = select_lines doc
 
     create_alerts_for_lines lines, mta_current_time
-  end
 
-  # For debugging purposes
-  def puts_lines lines
-    lines.each do |line|
-      name = line.css('name').inner_text
-      status = line.css('status').inner_text
-
-      puts "#{name}: #{status}"
-      fix_html line
-    end
+    # Any alerts that have an end_time that is before the current_time, but
+    # active: true, are residuals from the last iteration and are set to false.
+    Delay.update_active_false_for_ended
   end
 
   def get_page
@@ -36,18 +29,10 @@ class Feed
   end
 
   def select_lines doc
-    all_lines = doc.css('line')
+    all_lines = doc.xpath('service/subway/line')
     all_lines.select do |line|
-      is_train?(line) && has_alert?(line)
+      has_alert?(line)
     end
-  end
-
-  # Bus info is currently filtered out for simplicity.
-  def is_train? line
-    train_names = ["123", "456", "7", "ACE", "BDFM", "G", "JZ", "L", "NQR",
-                  "S", "SIR"]
-    line_name = line.css('name').inner_text.strip
-    train_names.include? line_name
   end
 
   # Trains with "GOOD SERVICE" don't have alerts
@@ -62,7 +47,7 @@ class Feed
     raw_text = line.css('text').inner_text
     regex = /<\/*br\/*>|<\/*b>|<\/*i>|<\/*u>|<\/*strong>|<\/*font.*?>/
     formatted_text = raw_text.gsub(regex, '').gsub('&nbsp;', ' ')
-                              .gsub('Posted: ', '').gsub(/\s{2,}/, ' ')
+                              .gsub(/\s{2,}/, ' ')
     Nokogiri::HTML formatted_text
   end
 
