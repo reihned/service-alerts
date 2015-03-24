@@ -5,15 +5,28 @@ class Feed
 
   def initialize
     page = get_page
-    doc = parse_page page
-    mta_current_time = doc.css('timestamp').inner_text
-    lines = select_lines doc
+    @doc = parse_page page
+    $mta_current_time = mta_current_time
 
-    create_alerts_for_lines lines, mta_current_time
+    # binding.pry
 
-    # Any alerts that have an end_time that is before the current_time, but
-    # active: true, are residuals from the last iteration and are set to false.
-    Delay.update_active_false_for_ended
+    # If the feed's timestamp is equal to end_time of the existing active delays
+    # then the feed hasn't been updated since we last checked it.
+    active_delay = Delay.find_by(active: true)
+    if active_delay.nil? || active_delay.end_time != $mta_current_time
+      lines = select_lines
+      create_alerts_for_lines lines
+
+      # Any alerts that have an end_time that is before the current_time, but
+      # active: true, are residuals from the last iteration and are set to
+      # false.
+      Delay.update_active_false_for_ended
+    end
+  end
+
+  def mta_current_time
+    time_str = @doc.xpath('service/timestamp').inner_text
+    DateTime.strptime time_str, "%m/%d/%Y %l:%M:%S %p"
   end
 
   def get_page
@@ -28,8 +41,8 @@ class Feed
     Nokogiri::XML page
   end
 
-  def select_lines doc
-    all_lines = doc.xpath('service/subway/line')
+  def select_lines
+    all_lines = @doc.xpath('service/subway/line')
     all_lines.select do |line|
       has_alert?(line)
     end
@@ -51,12 +64,12 @@ class Feed
     Nokogiri::HTML formatted_text
   end
 
-  def create_alerts_for_lines lines, mta_current_time
+  def create_alerts_for_lines lines
+    feed = self
     lines.each do |line|
       Alert.split_alerts(
         line.css('name').inner_text,
-        fix_html(line),
-        mta_current_time
+        fix_html(line)
       )
     end
   end
