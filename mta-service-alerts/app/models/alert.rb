@@ -6,7 +6,7 @@ class Alert
   @@delimiters_class = ["TitlePlannedWork", "TitleDelay", "TitleServiceChange"]
 
   def self.split_alerts line_name, alerts, mta_current_time
-    @@mta_current_time = self.process_mta_current_time mta_current_time
+    $mta_current_time = self.process_mta_current_time mta_current_time
 
     alerts_type = self.alerts_type alerts
     alerts_count = alerts_type.count
@@ -57,52 +57,13 @@ class Alert
 
 
 
-  attr_accessor :alert_type, :alert_html
-
   def initialize alert_type, alert_html
-    alert_type = alert_type
-    @alert_html = alert_html
-
-    if alert_type.inner_text == "Delays"
-      data = extract_delay_data
-      data[:original_html] = alert_type.to_s + @alert_html.to_s
-      data[:active] = true
-      
-      create_or_update_delay data
+    case alert_type.inner_text
+    when "Delays" then Delay.create_or_update alert_type, alert_html
+    when "Planned Work"
+      # TODO
+    when "Service Change"
+      # TODO
     end
   end
-
-  def create_or_update_delay data
-    alert = Delay.find_by(active: true, original_html: data[:original_html]) ||
-            Delay.create(data)
-
-    alert.update end_time: @@mta_current_time
-  end
-
-  def extract_delay_data
-    alert_text = @alert_html.inner_text.sub("Allow additional travel time.", '')
-
-    standard_delay = /Posted: (.+) Due to (.+) at (.+), (.+) trains are running with delays(.*)\./
-    residual_delay = /Posted: (.+) Following an earlier incident at (.+), (.+) trains service has resumed with residual delays(.*)\./
-
-    case alert_text
-    when standard_delay
-      {
-        start_time: Alert.process_start_time("#$1"),
-        incident_type: "#$2",
-        incident_location: "#$3",
-        affected_lines: "#$4#$5"
-      }
-    when residual_delay
-      {
-        start_time: Alert.process_start_time("#$1"),
-        incident_type: "residual delay",
-        incident_location: "#$2",
-        affected_lines: "#$3#$4"
-      }
-    else
-      {}
-    end
-  end
-
 end
