@@ -6,7 +6,7 @@ The [official MTA service-alert API](http://web.mta.info/status/serviceStatus.tx
 
 Many service-alerts only affect a subset of a train line, a fact only found in the human-readable text section of the status alert. Fortunately, the language used in these descriptions is of a fairly predictable nature. If you are familiar with any natural language processing, take a look at some of the sample html below and let us know.
 
-With this API in place, we plan to implement a friendly user interface for New Yorkers to find out about the status of train-lines-of-interest. Renderings of this web-app can be found on [our github page](https://github.com/BetaNYC/service-alerts/tree/master/design). 
+With this API in place, we plan to implement a friendly user interface for New Yorkers to find out about the status of train-lines-of-interest as a separate project. 
 
 
 ##Sample HTML
