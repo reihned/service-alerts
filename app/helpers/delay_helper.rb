@@ -1,0 +1,2 @@
+module DelayHelper
+end
