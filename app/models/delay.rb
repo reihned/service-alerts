@@ -9,14 +9,23 @@ class Delay < ActiveRecord::Base
     alert = Delay.find_by(active: true, original_html: data[:original_html]) ||
             Delay.create(data)
 
-    alert.update end_time: $mta_current_time
-    # TODO: duration
+    alert.update end_time: $mta_current_time,
+                 duration: self.calculate_duration(alert)
+  end
+
+  def self.calculate_duration alert
+    if alert.start_time.nil?
+      return nil
+    else
+      duration_seconds = $mta_current_time.to_time - alert.start_time.to_time
+      return duration_minutes = (duration_seconds / 60).to_i
+    end
   end
 
   def self.extract_data alert_type, alert_html
     alert_text = alert_html.inner_text.sub("Allow additional travel time.", '')
 
-    standard_delay = /Posted: (.+) Due to (.+) at (.+),.(.+).trains are running with delays(.*)\./
+    standard_delay = /Posted: (.+) Due to (.+) (between.+|at.+),.(.+).(?:train service is|trains are) running with delays(.*)\./
     residual_delay = /Posted: (.+) Following an earlier incident at (.+),.(.+).trains service has resumed with residual delays(.*)\./
 
     data = case alert_text

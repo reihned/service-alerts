@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20150318134705) do
+ActiveRecord::Schema.define(version: 20150325183125) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -24,6 +24,14 @@ ActiveRecord::Schema.define(version: 20150318134705) do
     t.boolean  "active"
     t.datetime "start_time"
     t.datetime "end_time"
+    t.integer  "duration"
+  end
+
+  create_table "raw_feeds", force: :cascade do |t|
+    t.datetime "mta_current_time"
+    t.text     "feed"
+    t.datetime "created_at",       null: false
+    t.datetime "updated_at",       null: false
   end
 
 end
