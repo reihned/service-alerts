@@ -7,6 +7,9 @@ class Feed
     @doc = parse_page page
     $mta_current_time = mta_current_time
 
+    # FIXME: This feels very wrong. I'd rather that this used the Feed model.
+    RawFeed.create feed: @doc.inner_html, mta_current_time: $mta_current_time
+
     # If the feed's timestamp is equal to end_time of the existing active delays
     # then the feed hasn't been updated since we last checked it.
     active_delay = Delay.find_by(active: true)
