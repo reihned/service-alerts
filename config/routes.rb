@@ -1,5 +1,6 @@
 Rails.application.routes.draw do
   get 'delay/index'
+  get 'raw_feed/index'
 
   resources :alerts, only: [:index, :show]
 
