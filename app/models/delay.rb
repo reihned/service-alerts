@@ -8,9 +8,13 @@ class Delay < ActiveRecord::Base
     data = self.extract_data alert_type, alert_html
     alert = Delay.find_by(active: true, original_html: data[:original_html]) ||
             Delay.create(data)
-            
-    alert.update end_time: $mta_current_time,
-                 duration: $mta_current_time - alert.start_time
+
+    alert.update end_time: $mta_current_time
+    unless alert.start_time.nil?
+      duration_seconds = $mta_current_time.to_time - alert.start_time.to_time
+      duration_minutes = (duration_seconds / 60).to_i
+      alert.update duration: duration_minutes
+    end
   end
 
   def self.extract_data alert_type, alert_html
